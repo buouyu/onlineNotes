@@ -259,3 +259,268 @@ module.exports = {
     }
 }
 ```
+
+####plugins配置
+以下三个都需要安装
+```js
+const { CleanWebpackPlugin } = require("clean-webpack-plugin")//清空原有生成
+const HtmlWebpackPlugin = require('html-webpack-plugin')//自动生成HTML
+const CopyPlugin = require('copy-webpack-plugin');//复制静态资源
+module.exports = {
+    mode: "development",
+    devtool: "source-map",
+    entry: {
+        home: "./src/index.js",
+        a: "./src/a.js"
+    },
+    output: {
+        filename: "scripts/[name].[chunkhash:5].js"
+    },
+    plugins: [
+        new CleanWebpackPlugin(),
+        new HtmlWebpackPlugin({//生成两个js分别引入各自的js
+            template: "./public/index.html",
+            filename: "home.html",
+            chunks: ["home"]
+        }),
+        new HtmlWebpackPlugin({
+            template: "./public/index.html",
+            filename: "a.html",
+            chunks: ["a"]
+        }),
+        new CopyPlugin([
+            { from: "./public", to: "./" }
+        ])
+    ]
+}
+```
+####开发服务器
+下载webpack-dev-server库
+配置文件,不需要引入，在webpack.config.js里
+```js
+devServer: {
+        port: 8000,
+        open: true,
+        proxy: { //代理规则
+            "/api": {
+                target: "http://open.duyiedu.com",
+                changeOrigin: true //更改请求头中的host和origin
+            }
+        }
+    },
+    stats: {
+        modules: false,
+        colors: true
+    }
+```
+例js文件
+```js
+const url = `/api/student/findAll?appkey=demo13_1545210570249`;
+fetch(url).then(resp => resp.json()).then(resp => {
+    console.log(resp)
+})
+```
+运行:npx webpack-dev-server
+####普通文件处理
+有两个库（都需要安装，webpack配置文件里不需要引入）：
+file-loader和url-loader
+```js
+module: {
+        rules: [
+            {
+                test: /\.(png)|(gif)|(jpg)$/,
+                use: [{
+                    loader: "url-loader",如果是file-loader则直接把匹配到的文件复制到下面的路径
+                    options: {
+                        // limit: false //不限制任何大小，所有经过loader的文件进行base64编码返回
+                        limit: 10 * 1024, //只要文件不超过 100*1024 字节，则使用base64编码，否则，交给file-loader进行处理
+                        name: "imgs/[name].[hash:5].[ext]"//生成的文件路径
+                    }
+                }]
+            }
+        ]
+    },
+```
+####解决文件路径问题
+```js
+module.exports = {
+    mode: "development",
+    devtool: "source-map",
+    output: {
+        filename: "scripts/[name].[chunkhash:5].js",
+        publicPath: "/"
+    },
+    module: {
+        rules: [
+            {
+                test: /\.(png)|(gif)|(jpg)$/,
+                use: [{
+                    loader: "file-loader",
+                    options: {
+                        name: "imgs/[name].[hash:5].[ext]"
+                    }
+                }]
+            }
+        ]
+    },
+    plugins: [
+        new CleanWebpackPlugin(),
+        new HtmlWebpackPlugin({
+            template: "./public/index.html",
+            filename: "html/index.html"
+        })
+    ],
+    devServer: {
+        open: true,
+        openPage: "html/index.html",
+    },
+    stats: {
+        modules: false,
+        colors: true
+    }
+}
+```
+####webpack内置插件
+引入webpack
+```js
+const webpack = require("webpack")
+
+module.exports = {
+    mode: "development",
+    devtool: "source-map",
+    plugins: [
+        new webpack.DefinePlugin({
+            PI: `Math.PI`, // const PI = Math.PI
+            VERSION: `"1.0.0"`, // VERSION = "1.0.0"
+            DOMAIN: JSON.stringify("duyi.com")  // DOMAIN = "duyi.com"
+        }),
+        //头部添加一行注释信息
+        new webpack.BannerPlugin({
+            banner: `
+            hash:[hash]
+            chunkhash:[chunkhash]
+            name:[name]
+            author:yuanjin
+            corporation:duyi
+            `
+        }),
+        //自动加载模块，而不必到处 import 或 require
+        new webpack.ProvidePlugin({
+            $: 'jquery',
+            _: 'lodash'
+        })
+    ]
+}
+```
+###css工程化
+下载两个库（loader在webpack配置文件里都不需要引入）：
+css-loader:将css代码转换为js代码,将css代码作为字符串导出
+style-loader:css-loader导出的字符串加入到页面的style元素中
+```js
+module: {
+        rules: [
+            { test: /\.css$/, use: ["style-loader", "css-loader"] },
+            {
+                test: /\.png$/, use: "file-loader"
+            }
+        ]
+    }
+```
+####BEM
+命名规范
+```css
+.banner__container {
+    width: 520px;
+    height: 280px;
+    margin: 0 auto;
+    outline: 1px solid;
+    overflow: hidden;
+    position: relative;
+}
+
+.banner__imgcontainer {
+    width: 1560px;
+    height: 280px;
+    /* background: red; */
+}
+
+.banner__imgcontainer img {
+    float: left;
+    width: 520px;
+    height: 280px;
+}
+```
+####css in js
+```js
+export const redBg = {
+    backgroundColor: "#f40",
+    color: "#fff",
+}
+
+export function border(width = 2, color = "#333") {
+    return {
+        border: `${width}px solid ${color}`
+    }
+}
+```
+```js
+export function applyStyles(dom, ...styles) {
+    let targetStyles = {}; //最终合并的样式对象
+    for (const style of styles) {
+        targetStyles = {
+            ...targetStyles,
+            ...style
+        }
+    }
+
+    for (const key in targetStyles) {
+        const value = targetStyles[key];
+        dom.style[key] = value;
+    }
+}
+```
+####css module
+开启css module  webpack配置文件modules设为true
+```js
+module: {
+        rules: [
+            {
+                // test: /\.css$/, use: ["style-loader", {
+                //     loader: "css-loader",
+                //     options: {
+                //         // modules: {
+                //         //     localIdentName: "[local]-[hash:5]"
+                //         // }
+                //         modules:true
+                //     }
+                // }]
+                test: /\.css$/, use:["style-loader", "css-loader?modules"]
+            }
+        ]
+    },
+```
+把css细分，然后当作模块导入js
+```js
+import style1 from  "./assets/style1.css"
+import style2 from "./assets/style2.css"
+console.log(style1)//为类名对应的hash值对象
+const div1 = document.getElementById("div1");
+div1.className = style2.c1;
+```
+####less
+需要下载less
+```shell
+npm i -D less
+```
+安装好了less之后，它提供了一个CLI工具`lessc`，通过该工具即可完成编译
+在那个文件夹里面`npx lessc lby.less lby.css `
+在webpack中的应用 下载less-loader
+```js
+module: {
+        rules: [
+            { test: /\.css$/, use: ["style-loader", "css-loader"] },
+            //下面这个在js中可直接引入less 
+            { test: /\.less$/, use: ["style-loader", "css-loader?modules", "less-loader"] },
+        ]
+    },
+```
