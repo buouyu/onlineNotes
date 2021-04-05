@@ -416,6 +416,7 @@ module.exports = {
 下载两个库（loader在webpack配置文件里都不需要引入）：
 css-loader:将css代码转换为js代码,将css代码作为字符串导出
 style-loader:css-loader导出的字符串加入到页面的style元素中
+style-loader只是动态把样式加入到head中，并不会直接加入html-webpack-plugin库生成的HTML页面中
 ```js
 module: {
         rules: [
@@ -507,6 +508,24 @@ console.log(style1)//为类名对应的hash值对象
 const div1 = document.getElementById("div1");
 div1.className = style2.c1;
 ```
+经过`["style-loader", "css-loader?modules"]`前
+```css
+h1{
+    color: red;
+}
+.paragraph{
+    color:green;
+}
+```
+经过`["style-loader", "css-loader?modules"]`后,在head中动态渲染
+```css
+h1{
+    color: red;
+}
+._2OLWzgH94jonrTFvIfsj7l{
+    color:green;
+}
+```
 ####less
 需要下载less
 ```shell
@@ -524,3 +543,455 @@ module: {
         ]
     },
 ```
+具体的使用见文档：https://less.bootcss.com/
+####postcss
+与webpack类似下载`npm i -D postcss postcss-cli`
+转换代码`npx postcss ./css/source.pcss -o ./css/lby.css`
+postcss.config.js文件
+```js
+module.exports = {
+    map: false, //关闭source-map
+    plugins: {
+        "postcss-preset-env": {
+            stage: 0, //哪怕是处于草案阶段的语法，也需要转换
+            preserve: false
+        },
+        "postcss-apply": {},
+        "postcss-color-function": {}
+    }
+}
+```
+package.json文件
+```js
+"devDependencies": {
+        "postcss": "^7.0.26",
+        "postcss-apply": "^0.12.0",
+        "postcss-cli": "^7.1.0",
+        "postcss-color-function": "^4.1.0",
+        "postcss-preset-env": "^6.7.0",
+        "stylelint": "^13.0.0",
+        "stylelint-config-standard": "^19.0.0"
+    }
+```
+postcss在webpack中的使用，下载postcss-loader
+`test: /\.pcss$/, use: ["style-loader", "css-loader?modules", "postcss-loader"]`
+抽离css文件
+下载库`mini-css-extract-plugin`
+output.publicPath是把所有的引入前面都加它的值，包括css里面引入的图片等
+```js
+const HtmlWebpackPlugin = require("html-webpack-plugin")
+var { CleanWebpackPlugin } = require("clean-webpack-plugin")
+const MiniCssExtractPlugin = require("mini-css-extract-plugin")
+module.exports = {
+    mode: "development",
+    entry: {
+        main: "./src/index.js",
+        // other: "./src/other.js"
+    },
+    output: {
+        filename: "js/[name].[chunkhash:5].js",
+        publicPath: "./"//所有的引入前面都加./
+    },
+    module: {
+        rules: [
+            {
+                test: /\.css$/, use: [MiniCssExtractPlugin.loader, "css-loader?modules"]
+            },
+            {
+                test: /\.jpg$/, use: {
+                    loader: "file-loader",
+                    options: {
+                        name: "img/[hash:5].[ext]"
+                    }
+                }
+            }
+        ]
+    },
+    devServer: {
+        open: true
+    },
+    plugins: [
+        new CleanWebpackPlugin(),
+        new HtmlWebpackPlugin({
+            template: "./public/index.html"
+        }),
+        new MiniCssExtractPlugin({
+            filename: "css/[name].[contenthash:5].css"
+        })
+    ]
+}
+```
+###babel
+几乎和postcss一样
+需要下载
+```shell
+npm i -D @babel/core @babel/cli
+```
+转换js文件`npx babel a.js -o lby.js`
+转换文件夹`npx babel js -d lby`
+没有配置babel没啥用,其配置文件为`.babel`
+babel预设，安装`npm i @babel/preset-env`
+`.babelrc`文件配置babel
+```js
+{
+    "presets": [//babel预设
+        ["@babel/preset-env", {
+            "useBuiltIns": "usage",
+            "corejs": 3
+        }]
+    ],
+    "plugins": [//babel插件
+        ["@babel/proposal-class-properties", {
+            "loose": true
+        }],
+        "@babel/proposal-function-bind",
+        "@babel/proposal-optional-chaining",
+        "transform-remove-console",//移除console
+        "@babel/transform-runtime"
+    ]
+}
+```
+package.json中的配置
+```js
+"devDependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.8.4",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/plugin-proposal-function-bind": "^7.8.3",
+    "@babel/plugin-proposal-optional-chaining": "^7.8.3",
+    "@babel/plugin-transform-runtime": "^7.8.3",
+    "@babel/preset-env": "^7.8.4",
+    "babel-plugin-transform-remove-console": "^6.9.4"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.8.4",
+    "core-js": "^3.6.4",
+    "regenerator-runtime": "^0.13.3"
+  }
+```
+> 具体的配置见：https://www.babeljs.cn/docs/babel-preset-env#options
+
+如果在webpack中应用babel,下载babel-loader
+在webpack.config.js中的配置
+```js
+module: {
+        rules: [
+            { test: /\.js$/, use: "babel-loader" }
+        ]
+    }
+```
+###性能优化
+- 减少模块解析
+在webpack.config.js里面配置
+```js
+module: {
+        noParse: /test/  //正则，匹配到的不解析
+        //就是直接把匹配到的js文件放到函数里
+        //如果匹配的文件内部有引入，则需要手动改动
+    }
+```
+- 优化loader性能
+```js
+module: {
+    rules: [
+      {
+        test: /\.js$/,
+        use: [
+          {
+            loader: "cache-loader",//缓存loader结果
+            options:{
+              cacheDirectory: "./cache"//缓存的文件夹
+            }
+          },
+          "thread-loader",//开启多线程
+          "babel-loader"
+        ]
+      }
+    ]
+  }
+```
+- 热替换
+- 手动打包
+package.json里
+```js
+ "scripts": {
+    "dev": "webpack",
+    "dll": "webpack --config webpack.dll.config.js"
+  },
+```
+配置一个webpack.dll.config.js的文件
+```js
+const webpack = require("webpack");
+const path = require("path");
+
+module.exports = {
+  mode: "development",
+  entry: {
+    jquery: ["jquery"],
+    lodash: ["lodash"]
+  },
+  output: {
+    filename: "dll/[name].js",
+    library: "[name]" // 每个bundle暴露的全局变量名
+  },
+  plugins: [
+    new webpack.DllPlugin({//生成资源清单
+      path: path.resolve(__dirname, "dll", "[name].manifest.json"),
+      //dll是文件夹，后面的是资源清单文件
+      name: "[name]"//资源清单中，暴露的变量名
+    })
+  ]
+};
+```
+先用这个文件打包`npm run dll`
+在模板html文件中手动引入这两个公共资源库
+在配置一个webpack.config.js文件
+```js
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const webpack = require("webpack");
+
+module.exports = {
+  mode: "development",
+  // devtool: "source-map",
+  entry: {
+    main: "./src/index.js",
+    other: "./src/other.js"
+  },
+  output: {
+    filename: "[name].[hash:5].js"
+  },
+  plugins: [
+    new CleanWebpackPlugin({
+      // 要清除的文件或目录
+      // 排除掉dll目录本身和它里面的文件
+      cleanOnceBeforeBuildPatterns: ["**/*", "!dll", "!dll/*"]
+    }),
+    new HtmlWebpackPlugin({
+      template: "./public/index.html"
+    }),
+    //引入两个资源清单
+    //在打包的时候就不会解析这两个库，节约时间
+    new webpack.DllReferencePlugin({
+      manifest: require("./dll/jquery.manifest.json")
+    }),
+    new webpack.DllReferencePlugin({
+      manifest: require("./dll/lodash.manifest.json")
+    })
+  ]
+};
+
+```
+然后`npm run dev`进行打包
+- 自动打包
+webpack配置文件
+```js
+const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const HtmlWebpackPlugin = require("html-webpack-plugin")
+
+module.exports = {
+  mode: "production",
+  entry: {
+    page1: "./src/page1",
+    page2: "./src/page2"
+  },
+  output: {
+    filename: "[name].[hash:5].js"
+  },
+  optimization: {
+    splitChunks: {
+      //分包配置
+      chunks: "all",
+      // maxSize: 60000
+      // automaticNameDelimiter: ".",
+      // minChunks: 1,
+      // minSize: 0
+      cacheGroups: {
+          //默认会抽离相同的js模块
+        styles: {
+          minSize: 0,
+          test: /\.css$/,
+          //匹配css文件，把多页面相同的引入模块抽离出来，形成一个新chunk
+          //默认会抽离
+          minChunks: 2
+        }
+      }
+    }
+  },
+  module: {
+    rules: [
+      { test: /\.css$/, use: [MiniCssExtractPlugin.loader, "css-loader"] }
+    ]
+  },
+  plugins: [
+    new CleanWebpackPlugin(),
+    new MiniCssExtractPlugin({
+      filename: "[name].[hash:5].css",
+      chunkFilename: "common.[hash:5].css"
+      // chunkFilename是配置来自于分割chunk的文件名
+    }),
+    new HtmlWebpackPlugin({
+      template:"./public/index.html",
+      chunks: ["page1"],
+      filename: "html/index1.html"
+    }),
+    new HtmlWebpackPlugin({
+      template:"./public/index.html",
+      chunks: ["page2"],
+      filename: "html/index2.html"
+    })
+  ],
+  stats: {
+    colors: true,
+    chunks: false,
+    modules: false
+  }
+};
+```
+- 代码压缩
+terser支持es6,目前比较流行
+webpack配置
+```js
+const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+const TerserPlugin = require("terser-webpack-plugin")//下载,简化js
+const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');//下载,简化css
+module.exports = {
+  mode: "development",
+  module: {
+    rules: [
+      { test: /\.css$/, use: [MiniCssExtractPlugin.loader, "css-loader"] }
+    ]
+  },
+  optimization: {
+    // 是否要启用压缩，默认情况下，生产环境会自动开启
+    minimize: true,
+    minimizer: [
+      // 压缩时使用的插件，可以有多个
+      new TerserPlugin(),
+      new OptimizeCSSAssetsPlugin()
+    ]
+  },
+  plugins: [
+    new CleanWebpackPlugin(),
+    new MiniCssExtractPlugin({
+      filename: "[name].[hash:5].css"
+    }),
+    new HtmlWebpackPlugin()
+  ],
+  stats: {
+    colors: true,
+    chunks: false,
+    modules: false
+  }
+};
+```
+- tree shaking
+删除用不到的代码
+webpack配置
+```js
+const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const DeepScope = require("webpack-deep-scope-plugin").default;
+const MiniCss = require("mini-css-extract-plugin");
+const Purgecss = require("purgecss-webpack-plugin");
+const path = require("path");
+const globAll = require("glob-all");
+const srcAbs = path.resolve(__dirname, "src"); //得到src的绝对路径
+const htmlPath = path.resolve(__dirname, "public/index.html");
+const paths = globAll.sync([`${srcAbs}**/*.js`, htmlPath]);
+//paths:得到一个文件路径数组，服务于purgecss-webpack-plugin
+
+module.exports = {
+  mode: "production",
+  module: {
+    rules: [{ test: /\.css$/, use: [MiniCss.loader, "css-loader"] }]
+  },
+  plugins: [
+    new CleanWebpackPlugin(),
+    new DeepScope(),
+    new MiniCss(),
+    new Purgecss({
+      paths
+    })
+  ]
+};
+```
+- 懒加载
+```js
+const btn = document.querySelector("button");
+btn.onclick = async function() {
+  //动态加载
+  //import 是ES6的草案
+  //浏览器会使用JSOP的方式远程去读取一个js模块
+  //import()会返回一个promise   （* as obj）
+  // const { chunk } = await import(/* webpackChunkName:"lodash" */"lodash-es");
+  const { chunk } = await import("./util");
+  const result = chunk([3, 5, 6, 7, 87], 2);
+  console.log(result);
+};
+```
+- eslink
+下载eslink库`npm i -g eslink`
+.eslinkrc.json配置文件
+```js
+{
+  "env": {
+    "browser": true,
+    "es6": true
+  },
+  "extends": "eslint:recommended",
+  "parserOptions": {
+    "ecmaVersion": 2018,
+    "sourceType": "module"
+  },
+  "rules": {
+    "curly": "off"
+  }
+}
+
+```
+- bundle analyzer
+自动出现一个页面，可以查看打包前，打包后，压缩后的代码比例
+需要下载webpack-bundle-analyzer库
+```js
+const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const WebpackBundleAnalyzer = require("webpack-bundle-analyzer")
+  .BundleAnalyzerPlugin;
+
+module.exports = {
+  mode: "production",
+  optimization: {
+    splitChunks: {
+      chunks: "all"
+    }
+  },
+  plugins: [new CleanWebpackPlugin(), new WebpackBundleAnalyzer()]
+};
+```
+- gzip
+使用`compression-webpack-plugin`插件对打包结果进行预压缩，可以移除服务器的压缩时间
+webpack配置文件
+```js
+const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const CmpressionWebpackPlugin = require("compression-webpack-plugin")
+module.exports = {
+  mode: "production",
+  optimization: {
+    splitChunks: {
+      chunks: "all"
+    }
+  },
+  plugins: [
+    new CleanWebpackPlugin(),
+    new CmpressionWebpackPlugin({
+      test: /\.js/,
+      minRatio: 0.5//压缩比率 ：压缩后的大小/压缩前的大小>0.5就压缩
+    })
+  ]
+};
+```
+
+
+
