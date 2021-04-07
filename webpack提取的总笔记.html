@@ -942,7 +942,41 @@ babel&#x9884;&#x8BBE;&#xFF0C;&#x5B89;&#x88C5;<code>npm i @babel/preset-env</code
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span>
 </pre><ul>
-<li>&#x70ED;&#x66FF;&#x6362;</li>
+<li>&#x70ED;&#x66FF;&#x6362;<br>
+&#x7262;&#x8BB0;&#x8FD0;&#x884C;&#x65F6;&#x547D;&#x4EE4;<code>npx webpack-dev-server</code><br>
+webpack&#x4E2D;&#x7684;&#x914D;&#x7F6E;</li>
+</ul>
+<pre data-role="codeBlock" data-info="js" class="language-javascript"><span class="token keyword">const</span> <span class="token maybe-class-name">HtmlWebpackPlugin</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">&quot;html-webpack-plugin&quot;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  mode<span class="token operator">:</span> <span class="token string">&quot;development&quot;</span><span class="token punctuation">,</span>
+  <span class="token comment">// devtool: &quot;source-map&quot;,</span>
+  devServer<span class="token operator">:</span><span class="token punctuation">{</span>
+    open<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    hot<span class="token operator">:</span> <span class="token boolean">true</span><span class="token comment">//&#x5F00;&#x542F;&#x70ED;&#x66FF;&#x6362;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  module<span class="token operator">:</span><span class="token punctuation">{</span>
+    rules<span class="token operator">:</span><span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>test<span class="token operator">:</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\.css$</span><span class="token regex-delimiter">/</span></span><span class="token punctuation">,</span> use<span class="token operator">:</span><span class="token punctuation">[</span><span class="token string">&quot;style-loader&quot;</span><span class="token punctuation">,</span> <span class="token string">&quot;css-loader&quot;</span><span class="token punctuation">]</span><span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  plugins<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token keyword">new</span> <span class="token class-name">HtmlWebpackPlugin</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      template<span class="token operator">:</span> <span class="token string">&quot;./public/index.html&quot;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</pre><p>&#x5165;&#x53E3;&#x6A21;&#x5757;&#x4E00;&#x5B9A;&#x52A0;&#x5165;&#x4E00;&#x4E0B;&#x4EE3;&#x7801;</p>
+<pre data-role="codeBlock" data-info="js" class="language-javascript"><span class="token keyword module">import</span> <span class="token imports">a</span> <span class="token keyword module">from</span> <span class="token string">&quot;./a&quot;</span><span class="token punctuation">;</span>
+<span class="token keyword module">import</span> <span class="token string">&quot;./index.css&quot;</span><span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>a<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">//&#x4E0B;&#x9762;&#x662F;&#x8981;&#x52A0;&#x5165;&#x7684;&#x4EE3;&#x7801;</span>
+<span class="token keyword control-flow">if</span> <span class="token punctuation">(</span>module<span class="token punctuation">.</span><span class="token property-access">hot</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// &#x662F;&#x5426;&#x5F00;&#x542F;&#x4E86;&#x70ED;&#x66F4;&#x65B0;</span>
+  module<span class="token punctuation">.</span><span class="token property-access">hot</span><span class="token punctuation">.</span><span class="token method function property-access">accept</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// &#x63A5;&#x53D7;&#x70ED;&#x66F4;&#x65B0;</span>
+<span class="token punctuation">}</span>
+</pre><p>&#x8FD0;&#x884C;&#x540E;&#xFF0C;&#x6539;&#x52A8;&#x4EE3;&#x7801;&#x53EA;&#x4F1A;&#x5237;&#x65B0;&#x90E8;&#x5206;&#x4EE3;&#x7801;&#xFF0C;&#x4E0D;&#x4F1A;&#x5237;&#x65B0;&#x6574;&#x4E2A;&#x9875;&#x9762;</p>
+<ul>
 <li>&#x624B;&#x52A8;&#x6253;&#x5305;<br>
 package.json&#x91CC;</li>
 </ul>

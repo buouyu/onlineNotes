@@ -711,6 +711,42 @@ module: {
   }
 ```
 - 热替换
+牢记运行时命令`npx webpack-dev-server`
+webpack中的配置
+```js
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+
+module.exports = {
+  mode: "development",
+  // devtool: "source-map",
+  devServer:{
+    open: true,
+    hot: true//开启热替换
+  },
+  module:{
+    rules:[
+      {test:/\.css$/, use:["style-loader", "css-loader"]}
+    ]
+  },
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: "./public/index.html"
+    })
+  ]
+};
+```
+入口模块一定加入一下代码
+```js
+import a from "./a";
+import "./index.css";
+console.log(a);
+//下面是要加入的代码
+if (module.hot) {
+  // 是否开启了热更新
+  module.hot.accept(); // 接受热更新
+}
+```
+运行后，改动代码只会刷新部分代码，不会刷新整个页面
 - 手动打包
 package.json里
 ```js
